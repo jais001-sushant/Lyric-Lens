@@ -1,41 +1,46 @@
 # 🎵 LyricLens
-### Model-Driven Content Augmentation with Collaborative Filtering for Music Recommendation
+### Hybrid Music Recommendation using Audio, Lyrics & Collaborative Filtering
 
-> **Minor Project — B.Tech CSE (AI/ML) | UPES Dehradun | 2022–2026**
-> **Reference:** *A Hybrid Deep Recommendation Model for Music Personalization* — Lalit Sachan
+> A content-aware music recommendation system that goes beyond audio matching — it understands what songs *mean* lyrically and how humans *group* them together.
 
 ---
 
 ## 📌 What is LyricLens?
 
-A hybrid music recommendation system combining **three signals** to find songs that truly feel alike — not just sound alike.
+Traditional recommenders match songs by audio features like tempo and energy. LyricLens adds two more signals — **lyric semantics** (what a song is about) and **collaborative filtering** (what songs humans listen to together) — making recommendations far more accurate and meaningful.
 
-| Signal | What it captures | PDF Section |
-|--------|-----------------|-------------|
-| Audio features (C matrix) | How a song SOUNDS | 2.3 |
-| Word2Vec lyrics (L matrix) | What a song MEANS | 2.4 |
-| Playlist CF (R matrix) | What humans GROUP together | 2.1 |
+**Example:** For "Love Me Like You Do" (Ellie Goulding), audio-only finds film scores and jazz. LyricLens finds "She Will Be Loved" (Maroon 5), "A Thousand Miles" (Vanessa Carlton) — thematically correct.
+
+| Signal | What it captures |
+|--------|-----------------|
+| Audio features (C matrix) | How a song SOUNDS |
+| Word2Vec lyrics (L matrix) | What a song MEANS |
+| Playlist CF (R matrix) | What humans GROUP together |
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-Spotify Audio (170k) + Lyrics/Playlist Dataset (18k)
-              ↓ Merge on name + artist
-         NLP Preprocessing
-    ┌────────┴─────────┐
-  C matrix           L matrix + R matrix
-  Audio features     Word2Vec + CF (playlist)
-  StandardScaler     Confidence: αui=1+10·log(1+rui)
-    └────────┬─────────┘
-    Adaptive Gated Fusion (Section 6.4)
-    ρ = softmax(gate_logits(popularity))
-              ↓
-    sui = γi + Σ(ρk × signalk)
-              ↓
-    Top-N Recommendations
-    Recall@K + NDCG@K Evaluation
+Spotify Audio Dataset (170k songs) + Lyrics & Playlist Dataset (18k songs)
+                    ↓ Merge on song name + artist
+              NLP Preprocessing
+        (tokenize → stopwords → lemmatize)
+         ┌──────────┴──────────┐
+   Audio Features          Lyrics NLP
+   9 features              Word2Vec (100-dim)
+   StandardScaler          Avg pooling → song vector
+   K-Means (k=20)                 +
+   Cosine Similarity       Playlist Co-occurrence CF
+                           Confidence weighting
+         └──────────┬──────────┘
+           Adaptive Gated Fusion
+        Weights adjust by song popularity
+        Popular → trust CF more
+        Niche   → trust content more
+                    ↓
+           Top-N Recommendations
+           Recall@10 + NDCG@10
 ```
 
 ---
@@ -45,15 +50,15 @@ Spotify Audio (170k) + Lyrics/Playlist Dataset (18k)
 ```
 LyricLens/
 ├── notebooks/
-│   └── LyricLens_FINAL.ipynb     ← Complete notebook (all cells)
+│   └── LyricLens_Main.ipynb
 ├── data/
-│   ├── raw/                      ← CSVs here (not tracked in Git)
+│   ├── raw/                  ← CSVs (not tracked in Git)
 │   │   ├── data.csv
 │   │   ├── data_by_genres.csv
 │   │   ├── data_by_year.csv
 │   │   └── spotify_songs.csv
-│   └── processed/                ← Auto-generated
-├── models/                       ← Auto-generated
+│   └── processed/            ← Auto-generated after running notebook
+├── models/                   ← Auto-generated after running notebook
 ├── assets/
 │   └── evaluation_dashboard.png
 ├── .gitignore
@@ -66,48 +71,58 @@ LyricLens/
 ## 🚀 Setup
 
 ```bash
-git clone https://github.com/jais001-sushant/LyricLens.git
-cd LyricLens
+git clone https://github.com/jais001-sushant/Lyric-Lens.git
+cd Lyric-Lens
 pip install -r requirements.txt
 ```
 
-**Datasets (place in data/raw/):**
+**Download datasets and place in `data/raw/`:**
 - [Spotify 1921-2020](https://www.kaggle.com/datasets/yamaerenay/spotify-dataset-19212020-160k-tracks) → `data.csv`, `data_by_genres.csv`, `data_by_year.csv`
 - [Audio + Lyrics](https://www.kaggle.com/datasets/imuhammad/audio-features-and-lyrics-of-spotify-songs) → `spotify_songs.csv`
 
 ```bash
-jupyter notebook notebooks/LyricLens_FINAL.ipynb
+jupyter notebook notebooks/LyricLens_Main.ipynb
 ```
 
 ---
 
-## 📊 Evaluation Results
+## 🧪 How It Works
 
-| Phase | Recall@10 | NDCG@10 |
-|-------|-----------|---------|
-| Phase 1 — Audio only | 0.0000 | 0.0000 |
-| Phase 2 — TF-IDF Hybrid | 0.0000 | 0.0000 |
-| **Phase 3 — Full PDF** | **0.1263** | **0.2816** |
+**Phase 1 — Audio Clustering**
+K-Means clustering on 15 audio features. Cosine similarity for recommendations. Visualized with t-SNE and PCA.
 
-Phase 1 & 2 score 0.0 because they ignore the collaborative signal entirely. Phase 3 catches real co-playlist songs via CF.
+**Phase 2 — TF-IDF Hybrid**
+NLP pipeline on raw lyrics. TF-IDF vectorization. Fixed 50/50 weighted hybrid scoring.
+
+**Phase 3 — Full Hybrid (Best)**
+Word2Vec semantic embeddings replace TF-IDF. Playlist co-occurrence builds the collaborative signal. Adaptive weights adjust automatically based on song popularity. Evaluated with Recall@10 and NDCG@10.
 
 ---
 
-## 📋 PDF Coverage
+## 📊 Results
 
-| Section | Concept | Status |
-|---------|---------|--------|
-| 2.1 | R matrix | ✅ Playlist co-occurrence |
-| 2.3 | C matrix | ✅ 9 audio features |
-| 2.4 | L matrix | ✅ Word2Vec 100-dim |
-| 3.1 | Confidence weighting | ✅ αui=1+10·log(1+rui) |
-| 6.4 | Adaptive gating | ✅ softmax weights |
-| 6.5 | Scoring + bias | ✅ γi + weighted signals |
-| 11.2 | Recall@K | ✅ Evaluated |
-| 11.3 | NDCG@K | ✅ Evaluated |
-| 14 | PyTorch NN | ⬜ Future work |
-| 8.8 | BPR loss | ⬜ Future work |
-| 2.2 | User features | ⬜ Future work |
+| Phase | Recall@10 | NDCG@10 | Notes |
+|-------|-----------|---------|-------|
+| Phase 1 — Audio only | 0.0000 | 0.0000 | Matches sound, ignores meaning |
+| Phase 2 — TF-IDF | 0.0000 | 0.0000 | Word count, no semantics |
+| **Phase 3 — Full Hybrid** | **0.1263** | **0.2816** | All 3 signals combined |
+
+---
+
+## ⚙️ Tech & Concepts Coverage
+
+| Concept | Implementation |
+|---------|---------------|
+| Audio Feature Clustering | K-Means (k=20 songs, k=10 genres) |
+| Dimensionality Reduction | t-SNE + PCA visualization |
+| NLP Preprocessing | Tokenization, stopwords, lemmatization |
+| Content Filtering | TF-IDF + cosine similarity (Phase 2) |
+| Semantic Embeddings | Word2Vec skip-gram, 100-dim (Phase 3) |
+| Collaborative Filtering | Playlist co-occurrence, item-based CF |
+| Confidence Weighting | αui = 1 + 10·log(1 + rui) |
+| Adaptive Gating | softmax weights based on song popularity |
+| Evaluation | Recall@K, NDCG@K, Intra-list Diversity |
+| Cold-start handling | Content fallback when CF unavailable |
 
 ---
 
@@ -117,13 +132,9 @@ Phase 1 & 2 score 0.0 because they ignore the collaborative signal entirely. Pha
 
 ---
 
-## 👥 Team
+## 🔮 Future Scope
 
-| Name | Enrollment |
-|------|-----------|
-| Sushant Jaiswal | 500123999 |
-| Suvrat Joshi | 500124269 |
-| Shivam Venkatesh | 500126674 |
-| Satyam Khandkeshar | 500124823 |
-
-**Mentor:** Mr. Lalit Sachan | **UPES Dehradun** | B.Tech CSE (AI/ML), 2022–2026
+- Real user play-count data for true collaborative filtering
+- Deep neural recommendation with PyTorch (MLP encoders + BPR loss)
+- Streamlit deployment with live demo interface
+- Faiss ANN indexing for production-scale inference
