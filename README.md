@@ -1,39 +1,41 @@
 # 🎵 LyricLens
 ### Model-Driven Content Augmentation with Collaborative Filtering for Music Recommendation
 
-> A hybrid music recommendation system that combines **audio feature analysis** with **lyric-based semantic similarity** using NLP — going beyond genre boundaries to find songs that truly *feel* alike.
+> **Minor Project — B.Tech CSE (AI/ML) | UPES Dehradun | 2022–2026**
+> **Reference:** *A Hybrid Deep Recommendation Model for Music Personalization* — Lalit Sachan
 
 ---
 
 ## 📌 What is LyricLens?
 
-Traditional recommendation systems match songs by audio features (tempo, energy, danceability) or user listening history. LyricLens adds a third signal — **what a song is actually *about*** — by analyzing lyrics using NLP.
+A hybrid music recommendation system combining **three signals** to find songs that truly feel alike — not just sound alike.
 
-**Example:**  
-A sad Ed Sheeran ballad and a sad Hindi ghazal might share lyrical themes of heartbreak but sound completely different. LyricLens catches that connection. Spotify won't.
+| Signal | What it captures | PDF Section |
+|--------|-----------------|-------------|
+| Audio features (C matrix) | How a song SOUNDS | 2.3 |
+| Word2Vec lyrics (L matrix) | What a song MEANS | 2.4 |
+| Playlist CF (R matrix) | What humans GROUP together | 2.1 |
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Architecture
 
 ```
-Spotify Audio Dataset (170k songs)          Lyrics Dataset (18k songs)
-        │                                           │
-        └──────────── Merge on name + artist ───────┘
-                              │
-                    Data Preprocessing
-                    (normalize, clean)
-                    ┌─────────┴─────────┐
-            Audio Pipeline          Lyrics NLP Pipeline
-            (StandardScaler)        (tokenize → stopwords
-            (K-Means k=20)           → lemmatize → TF-IDF)
-                    │                       │
-            Audio Cosine Sim        Lyrics Cosine Sim
-                    └─────────┬─────────┘
-                       Hybrid Score
-                  (audio × w1 + lyrics × w2)
-                              │
-                    Top-N Recommendations
+Spotify Audio (170k) + Lyrics/Playlist Dataset (18k)
+              ↓ Merge on name + artist
+         NLP Preprocessing
+    ┌────────┴─────────┐
+  C matrix           L matrix + R matrix
+  Audio features     Word2Vec + CF (playlist)
+  StandardScaler     Confidence: αui=1+10·log(1+rui)
+    └────────┬─────────┘
+    Adaptive Gated Fusion (Section 6.4)
+    ρ = softmax(gate_logits(popularity))
+              ↓
+    sui = γi + Σ(ρk × signalk)
+              ↓
+    Top-N Recommendations
+    Recall@K + NDCG@K Evaluation
 ```
 
 ---
@@ -43,19 +45,17 @@ Spotify Audio Dataset (170k songs)          Lyrics Dataset (18k songs)
 ```
 LyricLens/
 ├── notebooks/
-│   └── LyricLens_Main.ipynb      ← Main notebook (all phases)
+│   └── LyricLens_FINAL.ipynb     ← Complete notebook (all cells)
 ├── data/
-│   ├── raw/                      ← Original CSV files (not tracked in Git)
+│   ├── raw/                      ← CSVs here (not tracked in Git)
 │   │   ├── data.csv
 │   │   ├── data_by_genres.csv
 │   │   ├── data_by_year.csv
 │   │   └── spotify_songs.csv
-│   └── processed/                ← Merged + cleaned data (not tracked)
-│       └── lyriclens_merged.csv
-├── models/                       ← Saved TF-IDF + scaler (not tracked)
-│   └── lyriclens_models.pkl
-├── src/                          ← (Future) modular Python scripts
-├── assets/                       ← Screenshots, diagrams
+│   └── processed/                ← Auto-generated
+├── models/                       ← Auto-generated
+├── assets/
+│   └── evaluation_dashboard.png
 ├── .gitignore
 ├── requirements.txt
 └── README.md
@@ -63,74 +63,57 @@ LyricLens/
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Setup
 
-### 1. Clone the repo
 ```bash
 git clone https://github.com/jais001-sushant/LyricLens.git
 cd LyricLens
-```
-
-### 2. Install dependencies
-```bash
 pip install -r requirements.txt
 ```
 
-### 3. Download datasets
+**Datasets (place in data/raw/):**
+- [Spotify 1921-2020](https://www.kaggle.com/datasets/yamaerenay/spotify-dataset-19212020-160k-tracks) → `data.csv`, `data_by_genres.csv`, `data_by_year.csv`
+- [Audio + Lyrics](https://www.kaggle.com/datasets/imuhammad/audio-features-and-lyrics-of-spotify-songs) → `spotify_songs.csv`
 
-| Dataset | Source | File |
-|---------|--------|------|
-| Spotify 1921–2020 (audio) | [Kaggle](https://www.kaggle.com/datasets/yamaerenay/spotify-dataset-19212020-160k-tracks) | `data.csv`, `data_by_genres.csv`, `data_by_year.csv` |
-| Audio features + Lyrics | [Kaggle](https://www.kaggle.com/datasets/imuhammad/audio-features-and-lyrics-of-spotify-songs) | `spotify_songs.csv` |
-
-Place all CSV files in `data/raw/`.
-
-### 4. Run the notebook
 ```bash
-jupyter notebook notebooks/LyricLens_Main.ipynb
+jupyter notebook notebooks/LyricLens_FINAL.ipynb
 ```
 
 ---
 
-## 🧪 How It Works
+## 📊 Evaluation Results
 
-### Phase 1 — Audio Clustering
-- 15 audio features (danceability, energy, valence, tempo, acousticness...)
-- `StandardScaler` normalization
-- `K-Means` clustering (k=20 for songs, k=10 for genres)
-- `t-SNE` and `PCA` for 2D visualization
-- `Cosine similarity` for recommendation
+| Phase | Recall@10 | NDCG@10 |
+|-------|-----------|---------|
+| Phase 1 — Audio only | 0.0000 | 0.0000 |
+| Phase 2 — TF-IDF Hybrid | 0.0000 | 0.0000 |
+| **Phase 3 — Full PDF** | **0.1263** | **0.2816** |
 
-### Phase 2 — Lyrics NLP Pipeline
-- Text cleaning: lowercase, remove special characters
-- Tokenization with NLTK
-- Stopword removal (English + music-specific noise words)
-- Lemmatization (`loved → love`, `running → run`)
-- `TF-IDF` vectorization (5000 features, unigrams + bigrams)
-- Cosine similarity on lyric vectors
-
-### Phase 3 — Hybrid Scoring
-```python
-hybrid_score = (audio_weight × audio_similarity) + (lyric_weight × lyric_similarity)
-```
-Default weights: `audio=0.5, lyric=0.5` (tunable)
+Phase 1 & 2 score 0.0 because they ignore the collaborative signal entirely. Phase 3 catches real co-playlist songs via CF.
 
 ---
 
-## 📊 Results
+## 📋 PDF Coverage
 
-| Metric | Phase 1 (Audio Only) | Phase 2 (Hybrid) |
-|--------|---------------------|-----------------|
-| Dataset size | 170,653 songs | ~15,000–18,000 songs |
-| Cross-genre matching | Limited | Strong |
-| Lyric-aware | ❌ | ✅ |
-| Cold-start friendly | ✅ | ✅ |
+| Section | Concept | Status |
+|---------|---------|--------|
+| 2.1 | R matrix | ✅ Playlist co-occurrence |
+| 2.3 | C matrix | ✅ 9 audio features |
+| 2.4 | L matrix | ✅ Word2Vec 100-dim |
+| 3.1 | Confidence weighting | ✅ αui=1+10·log(1+rui) |
+| 6.4 | Adaptive gating | ✅ softmax weights |
+| 6.5 | Scoring + bias | ✅ γi + weighted signals |
+| 11.2 | Recall@K | ✅ Evaluated |
+| 11.3 | NDCG@K | ✅ Evaluated |
+| 14 | PyTorch NN | ⬜ Future work |
+| 8.8 | BPR loss | ⬜ Future work |
+| 2.2 | User features | ⬜ Future work |
 
 ---
 
 ## 🛠️ Tech Stack
 
-`Python` · `Pandas` · `NumPy` · `Scikit-learn` · `NLTK` · `Plotly` · `Matplotlib` · `Seaborn`
+`Python` · `Pandas` · `NumPy` · `Scikit-learn` · `NLTK` · `Gensim` · `SciPy` · `Plotly` · `Matplotlib` · `Streamlit`
 
 ---
 
@@ -138,16 +121,9 @@ Default weights: `audio=0.5, lyric=0.5` (tunable)
 
 | Name | Enrollment |
 |------|-----------|
+| Sushant Jaiswal | 500123999 |
 | Suvrat Joshi | 500124269 |
 | Shivam Venkatesh | 500126674 |
 | Satyam Khandkeshar | 500124823 |
-| Sushant Jaiswal | 500123999 |
 
-**Mentor:** Mr. Lalit Sachan  
-**Institution:** UPES Dehradun — B.Tech CSE (AI/ML), 2023–2027
-
----
-
-## 📄 License
-
-This project is for academic purposes under UPES Dehradun minor project guidelines.
+**Mentor:** Mr. Lalit Sachan | **UPES Dehradun** | B.Tech CSE (AI/ML), 2022–2026
