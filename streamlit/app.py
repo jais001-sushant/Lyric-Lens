@@ -59,7 +59,7 @@ html, body, [class*="css"] {
 /* ── Sidebar ── */
 [data-testid="stSidebar"] {
     background: var(--surface) !important;
-    border-right: 1px solid var(--surface2);
+    border-right: 1px solid var(--surface2) !important;
 }
 [data-testid="stSidebar"] * { color: var(--text) !important; }
 
@@ -104,12 +104,27 @@ html, body, [class*="css"] {
     border-radius: 500px !important;
     color: var(--text) !important;
     font-size: 1rem !important;
-    padding: 0.85rem 1.5rem !important;
+    padding: 0.75rem 1.5rem !important;
+    line-height: 1.5 !important;
     transition: border-color 0.2s ease;
 }
 .stTextInput input:focus {
     border-color: var(--green) !important;
     box-shadow: 0 0 0 3px rgba(29,185,84,0.15) !important;
+}
+
+.stTextInput > label {
+    display: none !important;
+}
+
+.stTextInput input {
+    padding: 0.75rem 1.5rem !important;
+    line-height: 1.5 !important;
+}
+
+div[data-testid="stHorizontalBlock"] > div:last-child .stButton > button {
+    margin-top: 0 !important;
+    padding: 0.75rem 2rem !important;
 }
 
 /* ── Buttons ── */
