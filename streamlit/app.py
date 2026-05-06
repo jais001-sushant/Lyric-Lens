@@ -674,9 +674,7 @@ with col_input:
         label_visibility="collapsed"
     )
 with col_btn:
-    st.markdown("<div style='margin-top:0.3rem'>", unsafe_allow_html=True)
     search_btn = st.button("Search")
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # ── Quick picks ───────────────────────────────────────────────────────────────
 st.markdown("""
